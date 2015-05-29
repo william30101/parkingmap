@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -23,7 +25,7 @@ import android.util.Log;
 
 public class parkingInfo {
 
-	private ArrayList<parkingInfo> parkinginfoArray = new ArrayList();
+	private ArrayList<parkingInfo> parkinginfoArray = new ArrayList<parkingInfo>();
 	
 	String id = null;
 	String area = null;
@@ -42,12 +44,9 @@ public class parkingInfo {
 	int totalbike = 0;
 	double XWgs = 0;
 	double YWgs = 0;
-	int fareWorkingDay0008 = 0 ;
-	int fareWorkingDay0818 = 0;
-	int fareWorkingDay1824 = 0;
-	int fareHoliDay0008 = 0;
-	int fareHoliDay0818 = 0;
-	int fareHoliDay1824 = 0;
+
+	HashMap<String,Integer> workingDayFareMap = new HashMap<String,Integer>(); //Period , fare
+	HashMap<String,Integer> holiDayFareMap = new HashMap<String,Integer>();
 	
 	public parkingInfo parkingInfoCreate(JSONObject inputJson)
 	{
@@ -104,6 +103,51 @@ public class parkingInfo {
 				double latlon[] = TWD97TM2toWGS84(this.tw97x,this.tw97y);
 				this.XWgs = latlon[0];
 				this.YWgs = latlon[1];
+			}
+			
+			if (!inputJson.isNull("FareInfo"))
+			{
+				String periodStr = null;
+				int fareNum;
+				String fareStr = inputJson.getString("FareInfo");
+				JSONObject fareobject = new JSONObject(fareStr);
+				if (!fareobject.isNull("WorkingDay"))
+				{
+					String WorkingDayData = fareobject.getString("WorkingDay");
+					// 這裡是宣告我們要繼續拆解的JSON陣列，所以要把剛剛撈到的字串轉換為JSON陣列
+					JSONArray WorkingDayArray = new JSONArray(WorkingDayData);
+					
+					for (int i = 0; i < WorkingDayArray.length(); i++) {
+						if (!WorkingDayArray.getJSONObject(i).isNull("Period") && !WorkingDayArray.getJSONObject(i).isNull("Fare"))
+						{
+							periodStr = WorkingDayArray.getJSONObject(i).getString("Period");
+							fareNum = Integer.parseInt(WorkingDayArray.getJSONObject(i).getString("Fare"));
+							workingDayFareMap.put(periodStr,fareNum);
+							
+						}
+								
+						
+					}
+				}
+				
+				if (!fareobject.isNull("Holiday"))
+				{
+					String holiDayData = fareobject.getString("Holiday");
+					// 這裡是宣告我們要繼續拆解的JSON陣列，所以要把剛剛撈到的字串轉換為JSON陣列
+					JSONArray holiDayArray = new JSONArray(holiDayData);
+					
+					for (int i = 0; i < holiDayArray.length(); i++) {
+						if (!holiDayArray.getJSONObject(i).isNull("Period") && !holiDayArray.getJSONObject(i).isNull("Fare"))
+						{
+							periodStr = holiDayArray.getJSONObject(i).getString("Period");
+							fareNum = Integer.parseInt(holiDayArray.getJSONObject(i).getString("Fare"));
+							holiDayFareMap.put(periodStr,fareNum);
+							
+						}
+								
+						
+					}
+				}
 			}
 			
 			
@@ -245,9 +289,24 @@ public class parkingInfo {
 
 				Log.i("william","parking name= " + parkinginfoArray.get(i).name + "\r\n " +
 						"id=" + parkinginfoArray.get(i).id + " x = " +parkinginfoArray.get(i).XWgs
-						+ " Y = " +parkinginfoArray.get(i).YWgs);
+						+ " Y = " +parkinginfoArray.get(i).YWgs );
+				Iterator it = parkinginfoArray.get(i).workingDayFareMap.keySet().iterator();
+				while(it.hasNext()) {
+				    String key=(String)it.next();
+				    int value=(int)parkinginfoArray.get(i).workingDayFareMap.get(key);
+				    
+				    Log.i("william","workingDay  time=" + key + " Fare = " + value);
+				}
 				
-
+				it = parkinginfoArray.get(i).holiDayFareMap.keySet().iterator();
+				while(it.hasNext()) {
+				    String key=(String)it.next();
+				    int value=(int)parkinginfoArray.get(i).holiDayFareMap.get(key);
+				    
+				    Log.i("william","Holiday  time=" + key + " Fare = " + value);
+				}
+				
+				Log.i("william","\r\n");
 			}
 		} catch (JSONException e) {
 			e.printStackTrace();
